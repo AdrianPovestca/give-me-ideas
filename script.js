@@ -1,129 +1,152 @@
-/* =========================================
-   YEAR
-========================================= */
+"use strict";
 
-const yearElement = document.getElementById("year");
+/* =========================================================
+   CONFIG
+========================================================= */
+
+const CONFIG = {
+    email: "YOUR_REAL_EMAIL@gmail.com",
+    exitPrice: "$5.99"
+};
+
+
+/* =========================================================
+   DOM HELPERS
+========================================================= */
+
+const $ = (selector) => document.querySelector(selector);
+
+const $$ = (selector) => document.querySelectorAll(selector);
+
+
+/* =========================================================
+   YEAR
+========================================================= */
+
+const yearElement = $("#year");
 
 if (yearElement) {
     yearElement.textContent = new Date().getFullYear();
 }
 
 
-/* =========================================
+/* =========================================================
    IDEA FORM
-========================================= */
+========================================================= */
 
-const ideaForm = document.getElementById("ideaForm");
-const ideaInput = document.getElementById("idea");
-const characterCount = document.getElementById("characterCount");
+const ideaForm = $("#ideaForm");
+const ideaInput = $("#idea");
+const characterCount = $("#characterCount");
 
-const formSuccess = document.getElementById("formSuccess");
-const sendAnother = document.getElementById("sendAnother");
+const formSuccess = $("#formSuccess");
+const sendAnother = $("#sendAnother");
 
 
-if (ideaInput && characterCount) {
+function updateCharacterCount() {
+    if (!ideaInput || !characterCount) {
+        return;
+    }
 
-    ideaInput.addEventListener("input", () => {
+    const length = ideaInput.value.length;
 
-        const length = ideaInput.value.length;
+    characterCount.textContent = `${length} / 500`;
+}
 
-        characterCount.textContent = `${length} / 500`;
 
-    });
-
+if (ideaInput) {
+    ideaInput.addEventListener("input", updateCharacterCount);
 }
 
 
 if (ideaForm) {
-
     ideaForm.addEventListener("submit", (event) => {
-
         event.preventDefault();
+
+        if (!ideaInput) {
+            return;
+        }
 
         const idea = ideaInput.value.trim();
 
         if (!idea) {
+            ideaInput.focus();
             return;
         }
 
+        if (idea.length > 500) {
+            return;
+        }
+
+        const subject = encodeURIComponent(
+            "New app idea — Adrian Builds"
+        );
+
+        const body = encodeURIComponent(
+            [
+                "Someone submitted a new app idea.",
+                "",
+                `IDEA:`,
+                idea,
+                "",
+                "Submitted from:",
+                window.location.href
+            ].join("\n")
+        );
+
+        const mailtoURL =
+            `mailto:${CONFIG.email}?subject=${subject}&body=${body}`;
 
         /*
-         * STATIC VERSION
-         *
-         * For now the idea is prepared as an email.
-         *
-         * Later we can replace this with:
-         *
-         * Supabase
-         * Firebase
-         * Formspree
-         * Resend
-         * Your own FastAPI endpoint
+         * Open the user's email client.
          */
-
-        const subject =
-            encodeURIComponent(
-                "New app idea from Adrian Builds"
-            );
-
-        const body =
-            encodeURIComponent(
-                `New idea:\n\n${idea}\n\nSent from adrian-builds website.`
-            );
-
-
-        const mailto =
-            `mailto:YOUR_EMAIL@example.com?subject=${subject}&body=${body}`;
-
-
-        window.location.href = mailto;
-
+        window.location.href = mailtoURL;
 
         /*
-         * Show success state after opening email client.
+         * Show success state.
          */
-
         ideaForm.classList.add("hidden");
 
-        formSuccess.classList.add("active");
-
+        if (formSuccess) {
+            formSuccess.classList.add("active");
+        }
     });
-
 }
 
 
 if (sendAnother) {
-
     sendAnother.addEventListener("click", () => {
 
-        formSuccess.classList.remove("active");
+        if (formSuccess) {
+            formSuccess.classList.remove("active");
+        }
 
-        ideaForm.classList.remove("hidden");
+        if (ideaForm) {
+            ideaForm.classList.remove("hidden");
+        }
 
-        ideaInput.value = "";
+        if (ideaInput) {
+            ideaInput.value = "";
+            ideaInput.focus();
+        }
 
-        characterCount.textContent = "0 / 500";
-
-        ideaInput.focus();
-
+        updateCharacterCount();
     });
-
 }
 
 
-/* =========================================
-   EXIT APP
-========================================= */
+/* =========================================================
+   EXIT APP MODAL
+========================================================= */
 
-const exitModal = document.getElementById("exitModal");
+const exitModal = $("#exitModal");
 
-const exitButton = document.getElementById("exitButton");
-const tryExit = document.getElementById("tryExit");
-const buildExit = document.getElementById("buildExit");
+const exitButton = $("#exitButton");
+const tryExit = $("#tryExit");
+const buildExit = $("#buildExit");
 
-const closeModal = document.getElementById("closeModal");
-const stayButton = document.getElementById("stayButton");
-const payButton = document.getElementById("payButton");
+const closeModalButton = $("#closeModal");
+const stayButton = $("#stayButton");
+const payButton = $("#payButton");
 
 
 function openExitModal(event) {
@@ -164,6 +187,8 @@ function closeExitModal() {
 }
 
 
+/* Open modal */
+
 if (exitButton) {
     exitButton.addEventListener(
         "click",
@@ -188,8 +213,10 @@ if (buildExit) {
 }
 
 
-if (closeModal) {
-    closeModal.addEventListener(
+/* Close modal */
+
+if (closeModalButton) {
+    closeModalButton.addEventListener(
         "click",
         closeExitModal
     );
@@ -204,6 +231,10 @@ if (stayButton) {
 }
 
 
+/* =========================================================
+   PAY BUTTON
+========================================================= */
+
 if (payButton) {
 
     payButton.addEventListener(
@@ -211,12 +242,11 @@ if (payButton) {
         () => {
 
             /*
-             * This is intentionally not connected
-             * to a real payment system.
+             * The payment is intentionally not connected yet.
              *
-             * Later:
-             * Stripe Checkout / Lemon Squeezy
-             * can be connected here.
+             * When you're ready, replace this section with
+             * Stripe Checkout / Lemon Squeezy / another
+             * payment provider.
              */
 
             alert(
@@ -225,13 +255,12 @@ if (payButton) {
 
         }
     );
-
 }
 
 
-/* =========================================
-   CLOSE MODAL WHEN CLICKING OUTSIDE
-========================================= */
+/* =========================================================
+   CLOSE MODAL WHEN CLICKING OVERLAY
+========================================================= */
 
 if (exitModal) {
 
@@ -249,63 +278,193 @@ if (exitModal) {
 
         }
     );
-
 }
 
 
-/* =========================================
-   ESCAPE KEY
-========================================= */
+/* =========================================================
+   ESC KEY
+========================================================= */
 
 document.addEventListener(
     "keydown",
     (event) => {
 
         if (event.key === "Escape") {
-
             closeExitModal();
-
         }
 
     }
 );
 
 
-/* =========================================
-   SMALL REVEAL ANIMATION
-========================================= */
+/* =========================================================
+   REVEAL ANIMATIONS
+========================================================= */
 
-const observer =
-    new IntersectionObserver(
-        (entries) => {
+const revealElements = $$(
+    ".build-card, .featured-card, .idea-item"
+);
 
-            entries.forEach((entry) => {
 
-                if (entry.isIntersecting) {
+if ("IntersectionObserver" in window) {
+
+    const revealObserver =
+        new IntersectionObserver(
+            (entries, observer) => {
+
+                entries.forEach((entry) => {
+
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
 
                     entry.target.classList.add(
                         "visible"
                     );
 
-                }
+                    observer.unobserve(
+                        entry.target
+                    );
 
-            });
+                });
 
-        },
-        {
-            threshold: 0.12
-        }
-    );
+            },
+            {
+                threshold: 0.12,
+                rootMargin: "0px 0px -40px 0px"
+            }
+        );
 
 
-document
-    .querySelectorAll(
-        ".build-card, .featured-card, .idea-item"
-    )
-    .forEach((element) => {
+    revealElements.forEach((element) => {
 
         element.classList.add("reveal");
 
-        observer.observe(element);
+        revealObserver.observe(element);
 
     });
+
+} else {
+
+    /*
+     * Fallback for older browsers.
+     */
+
+    revealElements.forEach((element) => {
+
+        element.classList.add("reveal");
+        element.classList.add("visible");
+
+    });
+}
+
+
+/* =========================================================
+   SMOOTH INTERNAL NAVIGATION
+========================================================= */
+
+$$('a[href^="#"]').forEach((link) => {
+
+    link.addEventListener(
+        "click",
+        (event) => {
+
+            const targetID =
+                link.getAttribute("href");
+
+            if (
+                !targetID ||
+                targetID === "#"
+            ) {
+                return;
+            }
+
+            const target =
+                document.querySelector(targetID);
+
+            if (!target) {
+                return;
+            }
+
+            /*
+             * Don't interfere with the exit buttons.
+             */
+            if (
+                link.id === "tryExit" ||
+                link.id === "buildExit"
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+
+            target.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+
+        }
+    );
+
+});
+
+
+/* =========================================================
+   PREVENT DOUBLE SUBMISSION
+========================================================= */
+
+if (ideaForm) {
+
+    ideaForm.addEventListener(
+        "submit",
+        () => {
+
+            const submitButton =
+                ideaForm.querySelector(
+                    'button[type="submit"]'
+                );
+
+            if (submitButton) {
+
+                /*
+                 * Small visual feedback before
+                 * opening the mail client.
+                 */
+
+                submitButton.style.opacity = "0.7";
+
+            }
+
+        }
+    );
+}
+
+
+/* =========================================================
+   INITIAL STATE
+========================================================= */
+
+updateCharacterCount();
+
+if (exitModal) {
+
+    exitModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+}
+
+
+/* =========================================================
+   CONSOLE
+========================================================= */
+
+console.log(
+    "%cADRIAN BUILDS",
+    "font-size: 20px; font-weight: 700;"
+);
+
+console.log(
+    "%cI turn stupid ideas into real apps.",
+    "font-size: 12px;"
+);
