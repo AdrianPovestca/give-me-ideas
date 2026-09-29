@@ -5,7 +5,7 @@
 ========================================================= */
 
 const CONFIG = {
-    email: "YOUR_REAL_EMAIL@gmail.com",
+    email: "adrianscriptpov@gmail.com",
     exitPrice: "$5.99"
 };
 
