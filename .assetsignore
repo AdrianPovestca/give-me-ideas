@@ -7,6 +7,9 @@
 
 .env.example
 
+.git/
+.wrangler/
+
 worker.js
 wrangler.json
 wrangler.jsonc
