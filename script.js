@@ -9,6 +9,7 @@ const CONFIG = {
     exitPrice: "$5.99"
 };
 
+
 /* =========================================================
    DOM HELPERS
 ========================================================= */
@@ -135,6 +136,7 @@ if (ideaForm) {
                 if (!response.ok) {
 
                     throw new Error(
+                        data.message ||
                         data.detail ||
                         "Could not send the idea."
                     );
@@ -167,6 +169,7 @@ if (ideaForm) {
 
 
                 alert(
+                    error.message ||
                     "Something went wrong. Please try again."
                 );
 
