@@ -5,7 +5,7 @@
 ========================================================= */
 
 const CONFIG = {
-    email: "adrianscriptpov@gmail.com",
+    apiBaseUrl: "YOUR_BACKEND_URL",
     exitPrice: "$5.99"
 };
 
@@ -54,83 +54,172 @@ function updateCharacterCount() {
 
 
 if (ideaInput) {
-    ideaInput.addEventListener("input", updateCharacterCount);
+    ideaInput.addEventListener(
+        "input",
+        updateCharacterCount
+    );
 }
 
 
 if (ideaForm) {
-    ideaForm.addEventListener("submit", (event) => {
-        event.preventDefault();
 
-        if (!ideaInput) {
-            return;
+    ideaForm.addEventListener(
+        "submit",
+        async (event) => {
+
+            event.preventDefault();
+
+            if (!ideaInput) {
+                return;
+            }
+
+            const idea = ideaInput.value.trim();
+
+            if (!idea) {
+                ideaInput.focus();
+                return;
+            }
+
+            if (idea.length > 500) {
+                return;
+            }
+
+
+            /* -------------------------------------------------
+               BUTTON
+            ------------------------------------------------- */
+
+            const submitButton =
+                ideaForm.querySelector(
+                    'button[type="submit"]'
+                );
+
+
+            if (submitButton) {
+
+                submitButton.disabled = true;
+                submitButton.style.opacity = "0.6";
+                submitButton.textContent = "Sending...";
+
+            }
+
+
+            /* -------------------------------------------------
+               SEND TO BACKEND
+            ------------------------------------------------- */
+
+            try {
+
+                const response = await fetch(
+                    `${CONFIG.apiBaseUrl}/api/ideas`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            idea: idea
+                        })
+                    }
+                );
+
+
+                const data = await response.json();
+
+
+                /* -------------------------------------------------
+                   ERROR FROM BACKEND
+                ------------------------------------------------- */
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.detail ||
+                        "Could not send the idea."
+                    );
+
+                }
+
+
+                /* -------------------------------------------------
+                   SUCCESS
+                ------------------------------------------------- */
+
+                ideaForm.classList.add("hidden");
+
+                if (formSuccess) {
+                    formSuccess.classList.add("active");
+                }
+
+
+                ideaInput.value = "";
+
+                updateCharacterCount();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Idea submission failed:",
+                    error
+                );
+
+
+                alert(
+                    "Something went wrong. Please try again."
+                );
+
+
+            } finally {
+
+                /* -------------------------------------------------
+                   RESET BUTTON
+                ------------------------------------------------- */
+
+                if (submitButton) {
+
+                    submitButton.disabled = false;
+                    submitButton.style.opacity = "";
+                    submitButton.textContent = "Send idea";
+
+                }
+
+            }
+
         }
+    );
 
-        const idea = ideaInput.value.trim();
-
-        if (!idea) {
-            ideaInput.focus();
-            return;
-        }
-
-        if (idea.length > 500) {
-            return;
-        }
-
-        const subject = encodeURIComponent(
-            "New app idea — Adrian Builds"
-        );
-
-        const body = encodeURIComponent(
-            [
-                "Someone submitted a new app idea.",
-                "",
-                `IDEA:`,
-                idea,
-                "",
-                "Submitted from:",
-                window.location.href
-            ].join("\n")
-        );
-
-        const mailtoURL =
-            `mailto:${CONFIG.email}?subject=${subject}&body=${body}`;
-
-        /*
-         * Open the user's email client.
-         */
-        window.location.href = mailtoURL;
-
-        /*
-         * Show success state.
-         */
-        ideaForm.classList.add("hidden");
-
-        if (formSuccess) {
-            formSuccess.classList.add("active");
-        }
-    });
 }
 
 
 if (sendAnother) {
-    sendAnother.addEventListener("click", () => {
 
-        if (formSuccess) {
-            formSuccess.classList.remove("active");
+    sendAnother.addEventListener(
+        "click",
+        () => {
+
+            if (formSuccess) {
+                formSuccess.classList.remove("active");
+            }
+
+            if (ideaForm) {
+                ideaForm.classList.remove("hidden");
+            }
+
+            if (ideaInput) {
+
+                ideaInput.value = "";
+                ideaInput.focus();
+
+            }
+
+            updateCharacterCount();
+
         }
+    );
 
-        if (ideaForm) {
-            ideaForm.classList.remove("hidden");
-        }
-
-        if (ideaInput) {
-            ideaInput.value = "";
-            ideaInput.focus();
-        }
-
-        updateCharacterCount();
-    });
 }
 
 
@@ -187,47 +276,61 @@ function closeExitModal() {
 }
 
 
-/* Open modal */
+/* ---------------------------------------------------------
+   OPEN MODAL
+--------------------------------------------------------- */
 
 if (exitButton) {
+
     exitButton.addEventListener(
         "click",
         openExitModal
     );
+
 }
 
 
 if (tryExit) {
+
     tryExit.addEventListener(
         "click",
         openExitModal
     );
+
 }
 
 
 if (buildExit) {
+
     buildExit.addEventListener(
         "click",
         openExitModal
     );
+
 }
 
 
-/* Close modal */
+/* ---------------------------------------------------------
+   CLOSE MODAL
+--------------------------------------------------------- */
 
 if (closeModalButton) {
+
     closeModalButton.addEventListener(
         "click",
         closeExitModal
     );
+
 }
 
 
 if (stayButton) {
+
     stayButton.addEventListener(
         "click",
         closeExitModal
     );
+
 }
 
 
@@ -242,11 +345,7 @@ if (payButton) {
         () => {
 
             /*
-             * The payment is intentionally not connected yet.
-             *
-             * When you're ready, replace this section with
-             * Stripe Checkout / Lemon Squeezy / another
-             * payment provider.
+             * Payment is intentionally not connected yet.
              */
 
             alert(
@@ -255,6 +354,7 @@ if (payButton) {
 
         }
     );
+
 }
 
 
@@ -273,11 +373,14 @@ if (exitModal) {
                     "modal-overlay"
                 )
             ) {
+
                 closeExitModal();
+
             }
 
         }
     );
+
 }
 
 
@@ -344,11 +447,8 @@ if ("IntersectionObserver" in window) {
 
     });
 
-} else {
 
-    /*
-     * Fallback for older browsers.
-     */
+} else {
 
     revealElements.forEach((element) => {
 
@@ -356,6 +456,7 @@ if ("IntersectionObserver" in window) {
         element.classList.add("visible");
 
     });
+
 }
 
 
@@ -372,6 +473,7 @@ $$('a[href^="#"]').forEach((link) => {
             const targetID =
                 link.getAttribute("href");
 
+
             if (
                 !targetID ||
                 targetID === "#"
@@ -379,16 +481,20 @@ $$('a[href^="#"]').forEach((link) => {
                 return;
             }
 
+
             const target =
                 document.querySelector(targetID);
+
 
             if (!target) {
                 return;
             }
 
+
             /*
-             * Don't interfere with the exit buttons.
+             * Don't interfere with exit buttons.
              */
+
             if (
                 link.id === "tryExit" ||
                 link.id === "buildExit"
@@ -396,7 +502,9 @@ $$('a[href^="#"]').forEach((link) => {
                 return;
             }
 
+
             event.preventDefault();
+
 
             target.scrollIntoView({
                 behavior: "smooth",
@@ -410,41 +518,11 @@ $$('a[href^="#"]').forEach((link) => {
 
 
 /* =========================================================
-   PREVENT DOUBLE SUBMISSION
-========================================================= */
-
-if (ideaForm) {
-
-    ideaForm.addEventListener(
-        "submit",
-        () => {
-
-            const submitButton =
-                ideaForm.querySelector(
-                    'button[type="submit"]'
-                );
-
-            if (submitButton) {
-
-                /*
-                 * Small visual feedback before
-                 * opening the mail client.
-                 */
-
-                submitButton.style.opacity = "0.7";
-
-            }
-
-        }
-    );
-}
-
-
-/* =========================================================
    INITIAL STATE
 ========================================================= */
 
 updateCharacterCount();
+
 
 if (exitModal) {
 
@@ -452,6 +530,7 @@ if (exitModal) {
         "aria-hidden",
         "true"
     );
+
 }
 
 
