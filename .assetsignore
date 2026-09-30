@@ -1,0 +1,16 @@
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+
+.gitignore
+
+.env.example
+
+worker.js
+wrangler.json
+wrangler.jsonc
+wrangler.toml
+
+main.py
+requirements.txt
