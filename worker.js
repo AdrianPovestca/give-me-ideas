@@ -1,142 +1,186 @@
+
+const ALLOWED_ORIGIN =
+  "https://give-me-ideas.adrianscriptpov.workers.dev";
+
+const JSON_HEADERS = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Cache-Control": "no-store"
+};
+
+function jsonResponse(data, status, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...JSON_HEADERS,
+      ...extraHeaders
+    }
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const origin = request.headers.get("Origin");
 
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin"
     };
 
-    if (request.method === "OPTIONS") {
+    /* HEALTH CHECK */
+
+    if (url.pathname === "/health" && request.method === "GET") {
+      return jsonResponse(
+        { status: "healthy" },
+        200
+      );
+    }
+
+    /* API PREFLIGHT */
+
+    if (url.pathname === "/api/ideas" && request.method === "OPTIONS") {
+      if (origin && origin !== ALLOWED_ORIGIN) {
+        return jsonResponse(
+          { success: false, message: "Origin not allowed." },
+          403
+        );
+      }
+
       return new Response(null, {
         status: 204,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
     }
 
+    /* SUBMIT IDEA */
+
     if (url.pathname === "/api/ideas" && request.method === "POST") {
+      if (origin !== ALLOWED_ORIGIN) {
+        return jsonResponse(
+          { success: false, message: "Origin not allowed." },
+          403
+        );
+      }
+
+      const contentType = request.headers.get("Content-Type") || "";
+
+      if (!contentType.toLowerCase().includes("application/json")) {
+        return jsonResponse(
+          { success: false, message: "Content-Type must be application/json." },
+          415,
+          corsHeaders
+        );
+      }
+
+      let body;
+
       try {
-        const body = await request.json();
-        const idea = String(body.idea || "").trim();
+        body = await request.json();
+      } catch {
+        return jsonResponse(
+          { success: false, message: "Invalid JSON request." },
+          400,
+          corsHeaders
+        );
+      }
 
-        if (!idea || idea.length > 500) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Idea must be between 1 and 500 characters.",
-            }),
-            {
-              status: 400,
-              headers: {
-                "Content-Type": "application/json",
-                ...corsHeaders,
-              },
-            }
-          );
-        }
+      const idea = typeof body.idea === "string"
+        ? body.idea.trim()
+        : "";
 
-        if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Telegram is not configured.",
-            }),
-            {
-              status: 500,
-              headers: {
-                "Content-Type": "application/json",
-                ...corsHeaders,
-              },
-            }
-          );
-        }
+      if (!idea || idea.length > 500) {
+        return jsonResponse(
+          {
+            success: false,
+            message: "Your idea must be between 1 and 500 characters."
+          },
+          400,
+          corsHeaders
+        );
+      }
 
+      if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
+        console.error("Telegram secrets are not configured.");
+
+        return jsonResponse(
+          {
+            success: false,
+            message: "The idea inbox is temporarily unavailable."
+          },
+          503,
+          corsHeaders
+        );
+      }
+
+      try {
         const telegramResponse = await fetch(
           `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json"
             },
             body: JSON.stringify({
               chat_id: env.TELEGRAM_CHAT_ID,
               text:
-                `NEW APP IDEA\n\n` +
-                `${idea}\n\n` +
-                `Source: Adrian Builds`,
-            }),
+                "NEW APP IDEA\n\n" +
+                idea +
+                "\n\nSource: Adrian Builds"
+            })
           }
         );
 
-        if (!telegramResponse.ok) {
-          console.error(
-            "Telegram API error:",
-            await telegramResponse.text()
-          );
+        let telegramData;
 
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Could not send the idea.",
-            }),
+        try {
+          telegramData = await telegramResponse.json();
+        } catch {
+          throw new Error("Telegram returned invalid JSON.");
+        }
+
+        if (
+          !telegramResponse.ok ||
+          telegramData.ok !== true
+        ) {
+          console.error("Telegram API rejected the message.");
+
+          return jsonResponse(
             {
-              status: 500,
-              headers: {
-                "Content-Type": "application/json",
-                ...corsHeaders,
-              },
-            }
+              success: false,
+              message: "Could not deliver your idea. Please try again."
+            },
+            502,
+            corsHeaders
           );
         }
 
-        return new Response(
-          JSON.stringify({
+        return jsonResponse(
+          {
             success: true,
-            message: "Idea sent successfully.",
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              ...corsHeaders,
-            },
-          }
+            message: "Idea sent successfully."
+          },
+          200,
+          corsHeaders
         );
-      } catch (error) {
-        console.error("Request error:", error);
 
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: "Invalid request.",
-          }),
+      } catch (error) {
+        console.error("Telegram delivery failed:", error);
+
+        return jsonResponse(
           {
-            status: 400,
-            headers: {
-              "Content-Type": "application/json",
-              ...corsHeaders,
-            },
-          }
+            success: false,
+            message: "Could not deliver your idea. Please try again."
+          },
+          502,
+          corsHeaders
         );
       }
     }
 
-    if (url.pathname === "/health" && request.method === "GET") {
-      return new Response(
-        JSON.stringify({
-          status: "healthy",
-        }),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
+    /* STATIC SITE */
 
     return env.ASSETS.fetch(request);
-  },
+  }
 };
